@@ -40,7 +40,7 @@ This project implements a dynamic tenant network provisioning service for Luxor 
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone git@github.com:srinivaskoritala/test.git
 cd luxor-network-service
 
 # Build the project

@@ -1,0 +1,291 @@
+openapi: 3.0.0
+info:
+  title: Luxor Cloud Network Provisioning API
+  version: 1.0.0
+  description: API for managing tenant networks and endpoints using VXLAN technology
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+components:
+  schemas:
+    Network:
+      type: object
+      required:
+        - tenant_id
+        - name
+        - vni
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the network
+        tenant_id:
+          type: string
+          description: Identifier of the tenant who owns this network
+        name:
+          type: string
+          description: Human-readable name for the network
+        vni:
+          type: integer
+          minimum: 1
+          maximum: 16777215
+          description: VXLAN Network Identifier
+        description:
+          type: string
+          description: Optional description of the network
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Endpoint:
+      type: object
+      required:
+        - network_id
+        - mac_address
+        - ip_address
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the endpoint
+        network_id:
+          type: string
+          format: uuid
+          description: ID of the network this endpoint belongs to
+        mac_address:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: MAC address of the endpoint
+        ip_address:
+          type: string
+          format: ipv4
+          description: IPv4 address of the endpoint
+        host_id:
+          type: string
+          description: Identifier of the host where this endpoint is located
+        vtep_ip:
+          type: string
+          format: ipv4
+          description: VTEP IP address for this endpoint
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Error message
+        details:
+          type: object
+          description: Additional error details
+
+paths:
+  /networks:
+    post:
+      summary: Create a new network
+      operationId: createNetwork
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Network'
+      responses:
+        '201':
+          description: Network created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Network'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Network already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: List all networks
+      operationId: listNetworks
+      parameters:
+        - name: tenant_id
+          in: query
+          schema:
+            type: string
+          description: Filter networks by tenant ID
+      responses:
+        '200':
+          description: List of networks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Network'
+
+  /networks/{network_id}:
+    parameters:
+      - name: network_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Network identifier
+
+    get:
+      summary: Get network details
+      operationId: getNetwork
+      responses:
+        '200':
+          description: Network details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Network'
+        '404':
+          description: Network not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete a network
+      operationId: deleteNetwork
+      responses:
+        '204':
+          description: Network deleted successfully
+        '404':
+          description: Network not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /networks/{network_id}/endpoints:
+    parameters:
+      - name: network_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Network identifier
+
+    post:
+      summary: Add endpoint to network
+      operationId: addEndpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Endpoint'
+      responses:
+        '201':
+          description: Endpoint added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Endpoint'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Network not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: List network endpoints
+      operationId: listEndpoints
+      responses:
+        '200':
+          description: List of endpoints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Endpoint'
+        '404':
+          description: Network not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /networks/{network_id}/endpoints/{endpoint_id}:
+    parameters:
+      - name: network_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Network identifier
+      - name: endpoint_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Endpoint identifier
+
+    get:
+      summary: Get endpoint details
+      operationId: getEndpoint
+      responses:
+        '200':
+          description: Endpoint details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Endpoint'
+        '404':
+          description: Endpoint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Remove endpoint from network
+      operationId: removeEndpoint
+      responses:
+        '204':
+          description: Endpoint removed successfully
+        '404':
+          description: Endpoint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error' 
